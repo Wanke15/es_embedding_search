@@ -1,3 +1,5 @@
+import json
+
 import gensim
 from elasticsearch import Elasticsearch
 
@@ -13,46 +15,52 @@ print('Load model time consumed: {:.2f}'.format(time.time() - start))
 
 
 def query(word, cat=None, index_name='word_vector_index', size=3):
-    query_vector = model.get_vector(word)
+    query_vector = model.get_vector(word).tolist()
     if cat is None:
         script_query = {
-            "script_score": {
-                "query": {"match_all": {}},
-                "script": {
-                    "source": "cosineSimilarity(params.query_vector, doc['text_vector']) + 1.0",
-                    "params": {"query_vector": query_vector.tolist()}
+            "query": {
+                "script_score": {
+                    "query": {
+                        "match_all": {}
+                    },
+                    "script": {
+                        "source": "cosineSimilarity(params.query_vector, doc['word_vector']) + 1.0",
+                        "params": {
+                            "query_vector": query_vector
+                        }
+                    }
                 }
-            }
+            },
+            "_source": ["word"]
         }
     else:
         script_query = {
-            "script_score": {
-                "query": {"bool": {
-                    "filter": [
-                        {
-                            "term": {
-                                "category": cat
-                            }
+            "query": {
+                "script_score": {
+                    "query": {
+                        "match": {
+                            "category": cat
                         }
-                    ]
-                }},
-                "script": {
-                    "source": "cosineSimilarity(params.query_vector, doc['word_vector']) + 1.0",
-                    "params": {"query_vector": query_vector}
+                    },
+                    "script": {
+                        "source": "cosineSimilarity(params.query_vector, doc['word_vector']) + 1.0",
+                        "params": {
+                            "query_vector": query_vector
+                        }
+                    }
                 }
-            }
+            },
+            "_source": ["word"]
         }
-    import json
-    print(json.dumps(script_query))
     response = client.search(
         index=index_name,
-        body={
-            "size": size,
-            "query": script_query,
-            "_source": {"includes": ["word", "category"]}
-        }
+        body=script_query,
+        size=size
     )
-    print(response['hits'])
+    print(json.dumps(response['hits']['hits'], indent=4))
 
 
 query("mice")
+query("mice", 'sports')
+query("mice", 'food')
+

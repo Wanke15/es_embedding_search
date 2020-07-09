@@ -32,13 +32,15 @@ def insert_to_es(doc_path='../data/documents.jsonl', index_name='word_vector_ind
 
     docs = []
     with open(doc_path, 'r') as f:
-        for line in f:
+        for idx, line in enumerate(f):
             record = json.loads(line.strip())
             docs.append({
                 '_index': index_name,
-                'word': record['word'],
-                'category': record['category'],
-                'word_vector': record['word_vector']
+                '_id': idx,
+                "_source": {
+                    'word': record['word'],
+                    'category': record['category'],
+                    'word_vector': record['word_vector']}
             })
     bulk(client, docs)
 
