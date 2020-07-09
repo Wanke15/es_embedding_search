@@ -37,10 +37,7 @@ def insert_to_es(doc_path='../data/documents.jsonl', index_name='word_vector_ind
             docs.append({
                 '_index': index_name,
                 '_id': idx,
-                "_source": {
-                    'word': record['word'],
-                    'category': record['category'],
-                    'word_vector': record['word_vector']}
+                "_source": record
             })
     bulk(client, docs)
 
